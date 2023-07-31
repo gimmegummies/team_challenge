@@ -1,36 +1,50 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import authService from "../services/auth-services";
 
 export default function Login({ onFormSwitch }) {
-  const [userName, setUserName] = useState("");
-  const [password, setPassword] = useState("");
+  const [formState, setFormState] = useState({
+    username: "",
+    password: "",
+  });
+
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const onChange = (e, type) => {
+    e.preventDefault();
+    setFormState({
+      ...formState,
+      [type]: e.target.value,
+    });
+  };
+
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    const data = { username: userName, password: password };
-    const url = "https://prod-chat.duckdns.org/api/token/";
+    const url = "https://test-chat.duckdns.org/api/login/";
 
-    axios({
-      url: url,
-      method: "POST",
-      data: data,
-    })
-      .then((res) => {
-        if (res.status !== 400 && res.status !== 401) {
-          console.log(res);
-          localStorage.setItem("accessToken", res.data.access);
-          localStorage.setItem("refreshToken", res.data.refresh);
+    const data = {
+      username: formState.username,
+      password: formState.password,
+    };
+
+    try {
+      await authService.login(url, data).then(
+        (responseData) => {
+          console.log(responseData);
+          // setUsername(responseData.user.username);
+          localStorage.setItem("user", JSON.stringify(responseData.user));
           navigate("/home");
+          // window.location.reload();
+        },
+        (error) => {
+          console.log(error);
         }
-      })
-
-      .catch((err) => {
-        alert(err.message);
-        console.error(err);
-      });
+      );
+    } catch (err) {
+      alert(err.response.data.detail);
+      console.log(err);
+    }
   };
 
   return (
@@ -44,8 +58,8 @@ export default function Login({ onFormSwitch }) {
           required
           autoComplete="off"
           id="user"
-          value={userName}
-          onChange={(e) => setUserName(e.target.value)}
+          value={formState.username}
+          onChange={(e) => onChange(e, "username")}
         />
         <label htmlFor="password">password</label>
         <input
@@ -54,8 +68,8 @@ export default function Login({ onFormSwitch }) {
           required
           autoComplete="off"
           id="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          value={formState.password}
+          onChange={(e) => onChange(e, "password")}
         />
         <button type="submit">Log in</button>
       </form>
